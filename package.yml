@@ -1,6 +1,6 @@
 package: community.lazycat.app.tududi
 name: Tududi
-version: 0.0.0
+version: 1.15.0
 description: "Self-hosted task and life organizer: projects, tasks, notes, areas and habits in one place."
 min_os_version: "1.5.0"
 homepage: https://github.com/chrisvel/tududi
