@@ -1,0 +1,71 @@
+application:
+  subdomain: tududi
+  multi_instance: false
+  # The app ships its own account system (sign-in page), so it is exposed
+  # directly and authenticates users itself.
+  public_path:
+    - /
+  upstreams:
+    - location: /
+      backend: http://tududi:3002/
+
+services:
+  db:
+    image: docker.1ms.run/library/postgres:16-alpine
+    environment:
+      - POSTGRES_DB=tududi
+      - POSTGRES_USER=tududi
+      - POSTGRES_PASSWORD={{ printf "%x" (stable_secret "db_password") }}
+    binds:
+      - /lzcapp/var/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tududi -d tududi"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  tududi:
+    # upstream: chrisvel/tududi:1.15.0
+    image: docker.1ms.run/chrisvel/tududi:1.15.0
+    environment:
+      # The connection string is parsed as a URL, so an unescaped password
+      # containing @ : / would corrupt it. The secret is hex-encoded for the
+      # same reason the value stays alphanumeric on the db side.
+      - DATABASE_URL=postgres://tududi:{{ printf "%x" (stable_secret "db_password") }}@db:5432/tududi
+      # Schema is created on first start against an empty database.
+      # Upstream defaults self-registration to OFF, so this initial account is
+      # the working sign-in path.
+      - TUDUDI_USER_EMAIL={{ .U.admin_email }}
+      - TUDUDI_USER_PASSWORD={{ .U.admin_password }}
+      - TUDUDI_SESSION_SECRET={{ stable_secret "session_secret" }}
+      - TUDUDI_ALLOWED_ORIGINS=https://{{ .S.AppDomain }}
+      # The entry sits in front of the container and forwards the real client
+      # address, so the app must trust the proxy headers.
+      - TUDUDI_TRUST_PROXY=true
+      - TUDUDI_UPLOAD_PATH=/app/uploads
+      - PUID=1001
+      - PGID=1001
+      - TZ=Asia/Shanghai
+    binds:
+      - /lzcapp/var/uploads:/app/uploads
+      - /lzcapp/var/backups:/app/backups
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3002/ || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+    depends_on:
+      - db
+
+usage: |
+  Tududi 是自托管的任务与生活管理工具：把项目、任务、笔记、领域和习惯集中在一处。
+
+  - 用部署时设置的管理员邮箱和密码登录；应用自带账号体系，所以它直接对外开放
+    （public_path），登录与权限都由 Tududi 自己负责。
+  - **自助注册默认关闭**（上游默认值），首个可用账号就是上面这个管理员账号；
+    如需让其他人注册，可在登录后到设置里开启注册开关。
+  - 后台由 PostgreSQL 组成（两个服务都在应用内部），不需要你另外准备数据库。
+  - 未做真机验证：登录、创建任务与笔记、上传附件、重启后数据留存
+    均未在设备上实测。

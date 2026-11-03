@@ -1,0 +1,18 @@
+package: community.lazycat.app.tududi
+name: Tududi
+version: 0.0.0
+description: "Self-hosted task and life organizer: projects, tasks, notes, areas and habits in one place."
+min_os_version: "1.5.0"
+homepage: https://github.com/chrisvel/tududi
+author: chrisvel
+license: MIT
+permissions:
+  required:
+    - net.internet
+locales:
+  zh:
+    name: Tududi
+    description: "自托管任务与生活管理：把项目、任务、笔记、领域和习惯集中在一处。"
+  en:
+    name: Tududi
+    description: "Self-hosted task and life organizer: projects, tasks, notes, areas and habits in one place."
